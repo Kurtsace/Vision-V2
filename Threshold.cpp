@@ -11,7 +11,7 @@ static int minHue = 0;
 static int maxHue = 179;
 
 static int minSat = 0;
-int maxSat = 255;
+static int maxSat = 255;
 
 static int minVal = 0;
 static int maxVal = 255;
@@ -27,8 +27,8 @@ static int kernelY = 5;
 static int sigmaX = 3;
 static int sigmaY = 3;
 
-//Initialized
-bool initialized = false;
+//Initialize
+static bool initialized = false;
 
 //Constructor
 //Parameter is a Mat image of the original frame and the final frame, a string identifying the color
