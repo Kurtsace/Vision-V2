@@ -4,6 +4,32 @@
 using namespace cv;
 using namespace std;
 
+//Variables
+
+//Hue, Saturation, Value
+static int minHue = 0;
+static int maxHue = 179;
+
+static int minSat = 0;
+int maxSat = 255;
+
+static int minVal = 0;
+static int maxVal = 255;
+
+//For the Morphological operator
+static int passes = 2;
+static int morphSize = 1;
+
+//Gaussian values
+static int kernelX = 5;
+static int kernelY = 5;
+
+static int sigmaX = 3;
+static int sigmaY = 3;
+
+//Initialized
+bool initialized = false;
+
 //Constructor
 //Parameter is a Mat image of the original frame and the final frame, a string identifying the color
 Threshold::Threshold(Mat *src, string c, Mat *fin) {
@@ -36,6 +62,7 @@ void Threshold::start(){
     if(initialized){
 
         Mat src(source->clone());
+        src.copyTo(*final);
 
         //Apply a size 5 median blur to the source image
         medianBlur(src, src, 5);
@@ -44,22 +71,19 @@ void Threshold::start(){
         cvtColor(src, hsv, COLOR_BGR2HSV);
 
         //Threshold the image
-        inRange(hsv, Scalar(preset.minHue, preset.minSat, preset.minVal), Scalar(preset.maxHue, preset.maxSat, preset.maxVal), threshold);
+        inRange(hsv, Scalar(minHue, minSat, minVal), Scalar(maxHue, maxSat, maxVal), threshold);
 
         //--ERROR checking, values cannot be even or 0
-        if(blur0.kernelX % 2 == 0 && blur0.kernelX <= 20)
-            blur0.kernelX++;
-        if(blur0.kernelY % 2 == 0 && blur0.kernelY <= 20)
-            blur0.kernelY++;
-        if(preset.morphSize == 0)
-            preset.morphSize++;
-
-        //Morphological passes
-        int passes = preset.passes;
+        if(kernelX % 2 == 0 && kernelX <= 20)
+            kernelX++;
+        if(kernelY % 2 == 0 && kernelY <= 20)
+            kernelY++;
+        if(morphSize == 0)
+            morphSize++;
 
         //Apply a slight Gaussian blur of default size 3x3 with a 0x0 sigma to the thresholded image
         //Values of kernels X and Y & sigma X and Y, can be changed manually using setBlur() --passes value can also be changed
-        GaussianBlur(threshold, threshold, Size(blur0.kernelX, blur0.kernelY), blur0.sigmaX, blur0.sigmaY);
+        GaussianBlur(threshold, threshold, Size(kernelX, kernelY), sigmaX, sigmaY);
 
         //Morphological opening
         morphologyEx(threshold, threshold, MORPH_OPEN, getStructuringElement(MORPH_CROSS, Size(3, 3)), Point(-1, -1), passes);
@@ -86,10 +110,7 @@ void Threshold::stop(){
 
     //Delete the pointers and free memory
     delete source;
-    source = nullptr;
-
     delete final;
-    final = nullptr;
 
 }
 
@@ -134,11 +155,11 @@ void Threshold::draw(int index){
     if(isRect){
 
         drawContours(*final, cont, index, color0, 2);
-        circle(*final, Point(rectCenterX, rectCenterY), 5, color1.WHITE, 2);
+        circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
         putText(*final, color + " Rectangle", Point(rectCenterX + 10, rectCenterY),
-                FONT_HERSHEY_SIMPLEX, .5, color1.BLACK, 2);
+                FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
         putText(*final, "Distance", Point(rectCenterX + 10, rectCenterY + 20),
-                FONT_HERSHEY_SIMPLEX, .40, color1.BLACK, 1);
+                FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
         polylines(*final, poly, true, color0, 2);
     }
 
@@ -146,11 +167,11 @@ void Threshold::draw(int index){
     if(isCircle){
 
         drawContours(*final, cont, index, color0, 2);
-        circle(*final, Point(rectCenterX, rectCenterY), 5, color1.WHITE, 2);
+        circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
         putText(*final, color + " Circle", Point(rectCenterX, rectCenterY),
-                FONT_HERSHEY_SIMPLEX, .5, color1.BLACK, 2);
+                FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
         putText(*final, "Distance", Point(rectCenterX + 10, rectCenterY + 20),
-                FONT_HERSHEY_SIMPLEX, .40, color1.BLACK, 1);
+                FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
         circle(*final, center, radius, color0, 2);
     }
 }
@@ -208,33 +229,33 @@ void Threshold::setColor() {
 
     if (color == "red") {
 
-        color0 = color1.RED;
+        color0 = RED;
         setMinHSV(160, 70, 60);
 
     } else if (color == "blue") {
 
-        color0 = color1.BLUE;
+        color0 = BLUE;
         setMinHSV(80, 70, 35);
         setMaxHSV(125, 255, 255);
 
     } else if (color == "green") {
 
-        color0 = color1.GREEN;
+        color0 = GREEN;
         setMinHSV(50, 50, 50);
         setMaxHSV(80, 255, 255);
 
     } else if (color == "yellow") {
 
-        color0 = color1.YELLOW;
+        color0 = YELLOW;
         setMinHSV(30, 60, 100);
         setMaxHSV(50, 255, 255);
 
     } else if (color == "white") {
 
-        color0 = color1.WHITE;
+        color0 = WHITE;
     } else if(color == "custom") {
 
-        color0 = color1.BLACK;
+        color0 = BLACK;
 
     } else if(color == "" && !initialized){
 
@@ -262,22 +283,22 @@ void Threshold::createThreshControl(){
     namedWindow("Control" ,CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
     //Hue, Saturation, and Value
-    cvCreateTrackbar("LowH", "Control", &preset.minHue, 179); //Hue (0-179)
-    cvCreateTrackbar("HighH", "Control", &preset.maxHue, 179);
+    cvCreateTrackbar("LowH", "Control", &minHue, 179); //Hue (0-179)
+    cvCreateTrackbar("HighH", "Control", &maxHue, 179);
 
-    cvCreateTrackbar("LowS", "Control", &preset.minSat, 255); //Saturation (0 - 255)
-    cvCreateTrackbar("HighS", "Control", &preset.maxSat, 255);
+    cvCreateTrackbar("LowS", "Control", &minSat, 255); //Saturation (0 - 255)
+    cvCreateTrackbar("HighS", "Control", &maxSat, 255);
 
-    cvCreateTrackbar("LowV", "Control", &preset.minVal, 255); //Value (0-255)
-    cvCreateTrackbar("HighV", "Control", &preset.maxVal, 255);
+    cvCreateTrackbar("LowV", "Control", &minVal, 255); //Value (0-255)
+    cvCreateTrackbar("HighV", "Control", &maxVal, 255);
 
     //Morphological operator
 
     //Create a track bar for the amount of Morphological passes to apply, max value is 10
-    cvCreateTrackbar("Passes", "Blur", &preset.passes, 10);
+    cvCreateTrackbar("Passes", "Blur", &passes, 10);
 
     //Create a track bar for the size of the MORPH_SHAPE, max value is 25
-    cvCreateTrackbar("Shape Size", "Blur",&preset.morphSize, 25);
+    cvCreateTrackbar("Shape Size", "Blur",&morphSize, 25);
 
 }
 
@@ -296,12 +317,12 @@ void Threshold::setBlur(){
     namedWindow("Blur", CV_WINDOW_AUTOSIZE);
 
     //Create a track bar for kernel X and Y, max value is 20 --Value cannot be even
-    cvCreateTrackbar("Kernel X", "Blur", &blur0.kernelX, 20);
-    cvCreateTrackbar("Kernel Y", "Blur", &blur0.kernelY, 20);
+    cvCreateTrackbar("Kernel X", "Blur", &kernelX, 20);
+    cvCreateTrackbar("Kernel Y", "Blur", &kernelY, 20);
 
     //Create a track bar for sigma X and Y, max value is 10
-    cvCreateTrackbar("Sigma X", "Blur", &blur0.sigmaX, 20);
-    cvCreateTrackbar("Sigma Y", "Blur", &blur0.sigmaY, 20);
+    cvCreateTrackbar("Sigma X", "Blur", &sigmaX, 20);
+    cvCreateTrackbar("Sigma Y", "Blur", &sigmaY, 20);
 
     //Show the threshold
     showThresh();
@@ -319,17 +340,17 @@ void Threshold::setBlur(){
 //Override for minimum HSV values if you do not want to use a track bar or if you know what your HSV values will be ahead of time
 void Threshold::setMinHSV(int hue, int sat, int val){
 
-    preset.minHue = hue;
-    preset.minSat = sat;
-    preset.minVal = val;
+    minHue = hue;
+    minSat = sat;
+    minVal = val;
 }
 
 //Override for maximum HSV values
 void Threshold::setMaxHSV(int hue, int sat, int val) {
 
-    preset.maxHue = hue;
-    preset.maxSat = sat;
-    preset.maxVal = val;
+    maxHue = hue;
+    maxSat = sat;
+    maxVal = val;
 }
 
 
