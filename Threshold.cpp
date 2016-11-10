@@ -40,8 +40,6 @@ void Threshold::start(){
         //Apply a size 5 median blur to the source image
         medianBlur(src, src, 5);
 
-        imshow("src", src);
-
         //Convert source material into HSV
         cvtColor(src, hsv, COLOR_BGR2HSV);
 
@@ -216,8 +214,8 @@ void Threshold::setColor() {
     } else if (color == "blue") {
 
         color0 = color1.BLUE;
-        setMinHSV(80, 80, 35);
-        setMaxHSV(120, 255, 255);
+        setMinHSV(80, 70, 35);
+        setMaxHSV(125, 255, 255);
 
     } else if (color == "green") {
 
