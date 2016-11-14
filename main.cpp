@@ -38,11 +38,8 @@ int main() {
         }
 
         //Call start for the object in the while loop
-        yellow.start();
         red.start();
-
-        red.showThresh();
-        yellow.showThresh();
+        red.setBlur();
 
         //Create a single imshow window containing only final
         namedWindow("Output", CV_WINDOW_AUTOSIZE);

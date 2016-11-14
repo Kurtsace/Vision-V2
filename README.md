@@ -4,6 +4,15 @@ Vision V2
 
 ----------------|
 
+November 14, 2016 
+
+	A few major changes to the structure of the code --See variables
+	Kernel x and y is a default size of 7. 
+	Sigma x and y is a default size of 3.
+	Added a [buggy] version of distance to object. 
+		Distance formula works but has an uncertainty error. 
+	
+
 November 10, 2016
 
 	Minor fixes concerning compatibility and compiler issues. 

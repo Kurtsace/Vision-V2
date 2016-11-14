@@ -6,6 +6,9 @@ using namespace std;
 
 //Variables
 
+//Focal length
+static const int focalLength = 593;
+
 //How many Threshold objects are created
 static int objects = 0;
 
@@ -36,6 +39,7 @@ Threshold::Threshold(){
 
     color = "";
     initialized = false;
+    setColor();
 }
 
 //Begins thresholding the source image, finds contours, draws contours, and draws bounding boxes
@@ -95,7 +99,6 @@ void Threshold::stop(){
 
     source = NULL;
     final = NULL;
-
 }
 
 //Draw the associated bounding box and the contours for the contour with the largest area
@@ -133,6 +136,13 @@ void Threshold::draw(int index){
     bool isRect = approxPoly.size() >= 4 && approxPoly.size() <= 8;
     bool isCircle = approxPoly.size() >= 9 && approxPoly.size() <= 16;
 
+    //Calculate focal length for the basket
+    cout << getFocalLength(rectWidth) << endl;
+
+    //Distance to the object in CM
+    int dist = getDistance(rectWidth);
+    string distance = to_string(dist) + " CM";
+
     //Draw the corresponding bounding boxes and contours with the indexed contour
 
     //If its a rectangle draw the contours and a rectangular bounding with text saying the shape, color, and distance
@@ -142,7 +152,7 @@ void Threshold::draw(int index){
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
         putText(*final, color + " Rectangle", Point(rectCenterX + 10, rectCenterY),
                 FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
-        putText(*final, "Distance", Point(rectCenterX + 10, rectCenterY + 20),
+        putText(*final, distance, Point(rectCenterX + 10, rectCenterY + 20),
                 FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
         polylines(*final, poly, true, color0, 2);
     }
@@ -154,7 +164,7 @@ void Threshold::draw(int index){
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
         putText(*final, color + " Circle", Point(rectCenterX, rectCenterY),
                 FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
-        putText(*final, "Distance", Point(rectCenterX + 10, rectCenterY + 20),
+        putText(*final, distance + " CM", Point(rectCenterX + 10, rectCenterY + 20),
                 FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
         circle(*final, center, radius, color0, 2);
     }
@@ -211,6 +221,17 @@ void Threshold::largestContours(){
  */
 void Threshold::setColor() {
 
+    //Set initial blur values
+    kernelX = 7;
+    kernelY = 7;
+    sigmaX = 3;
+    sigmaY = 3;
+
+    //Set initial HSV values
+    setMaxHSV(255, 255, 255);
+    setMinHSV(0, 0, 0);
+
+    //Check the color and then set the HSV values and draw color
     if (color == "red") {
 
         color0 = RED;
@@ -335,6 +356,16 @@ void Threshold::setMaxHSV(int hue, int sat, int val) {
     maxHue = hue;
     maxSat = sat;
     maxVal = val;
+}
+
+int Threshold::getFocalLength(int pixWidth){
+
+    return (pixWidth * 30) / 9;
+}
+
+int Threshold::getDistance(double pixWidth){
+
+    return (9 * focalLength) / pixWidth;
 }
 
 

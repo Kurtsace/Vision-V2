@@ -44,37 +44,25 @@ private:
     //Variables
 
     //Hue, Saturation, Value
-    int minHue = 0;
-    int maxHue = 179;
-
-    int minSat = 0;
-    int maxSat = 255;
-
-    int minVal = 0;
-    int maxVal = 255;
+    int minHue, maxHue, minSat, maxSat, minVal, maxVal;
 
     //For the Morphological operator
-    int passes = 2;
-    int morphSize = 1;
+    int passes, morphSize;
 
     //Gaussian values
-    int kernelX = 5;
-    int kernelY = 5;
-
-    int sigmaX = 3;
-    int sigmaY = 3;
+    int kernelX, kernelY, sigmaX, sigmaY;
 
     //Initialize
-    bool initialized = false;
+    bool initialized;
 
     //Scalar values for color
     //B, G, R
-    Scalar RED = Scalar(0, 0, 255);
-    Scalar GREEN = Scalar(0, 255, 0);
-    Scalar BLUE = Scalar(255, 0 ,0);
-    Scalar WHITE = Scalar(255, 255, 255);
-    Scalar YELLOW = Scalar(0, 215, 255);
-    Scalar BLACK = Scalar(0, 0, 0);
+    const Scalar RED = Scalar(0, 0, 255);
+    const Scalar GREEN = Scalar(0, 255, 0);
+    const Scalar BLUE = Scalar(255, 0 ,0);
+    const Scalar WHITE = Scalar(255, 255, 255);
+    const Scalar YELLOW = Scalar(0, 215, 255);
+    const Scalar BLACK = Scalar(0, 0, 0);
 
     //For contours and shape recognition
     vector< vector<Point> > cont;
@@ -85,6 +73,8 @@ private:
     void setColor();
     void largestContours();
     void draw(int index);
+    int getFocalLength(int pixWidth);
+    int getDistance(double pixWidth);
 
 };
 
