@@ -6,29 +6,8 @@ using namespace std;
 
 //Variables
 
-//Hue, Saturation, Value
-static int minHue = 0;
-static int maxHue = 179;
-
-static int minSat = 0;
-static int maxSat = 255;
-
-static int minVal = 0;
-static int maxVal = 255;
-
-//For the Morphological operator
-static int passes = 2;
-static int morphSize = 1;
-
-//Gaussian values
-static int kernelX = 5;
-static int kernelY = 5;
-
-static int sigmaX = 3;
-static int sigmaY = 3;
-
-//Initialize
-static bool initialized = false;
+//How many Threshold objects are created
+static int objects = 0;
 
 //Constructor
 //Parameter is a Mat image of the original frame and the final frame, a string identifying the color
@@ -44,6 +23,9 @@ Threshold::Threshold(Mat *src, string c, Mat *fin) {
 
     //Set initialized to true
     initialized = true;
+
+    //Increment objects
+    objects++;
 
     //Set the Scalar color
     setColor();
@@ -62,7 +44,6 @@ void Threshold::start(){
     if(initialized){
 
         Mat src(source->clone());
-        src.copyTo(*final);
 
         //Apply a size 5 median blur to the source image
         medianBlur(src, src, 5);
@@ -111,6 +92,9 @@ void Threshold::stop(){
     //Delete the pointers and free memory
     delete source;
     delete final;
+
+    source = NULL;
+    final = NULL;
 
 }
 
