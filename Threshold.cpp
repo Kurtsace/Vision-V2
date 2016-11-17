@@ -30,7 +30,7 @@ Threshold::Threshold(Mat *src, string c, Mat *fin) {
     //Increment objects
     objects++;
 
-    //Set the Scalar color
+    //Set the HSV and Scalar colors
     setColor();
 }
 
@@ -47,6 +47,7 @@ void Threshold::start(){
 
     if(initialized){
 
+        //Clone source into a separate Mat called src
         Mat src(source->clone());
 
         //Apply a size 5 median blur to the source image
@@ -58,7 +59,7 @@ void Threshold::start(){
         //Threshold the image
         inRange(hsv, Scalar(minHue, minSat, minVal), Scalar(maxHue, maxSat, maxVal), threshold);
 
-        //--ERROR checking, values cannot be even or 0
+        //--ERROR checking-- values cannot be even or 0
         if(kernelX % 2 == 0 && kernelX <= 20)
             kernelX++;
         if(kernelY % 2 == 0 && kernelY <= 20)
@@ -213,7 +214,6 @@ void Threshold::largestContours(){
  *
  *      Orange -- Basically the same as red but brighter, detect by creating red and using setThreshold()
  *      Black -- No reason to threshold and detect black unless you really wanted to, use setThreshold()
- *      Purple -- Not really sure why you would want to detect purple
  *
  *      If you want to detect an unsupported color just set the string as "CUSTOM" in the constructor and set your own hsv values
  *
@@ -230,6 +230,7 @@ void Threshold::setColor() {
 
         color0 = RED;
         setMinHSV(160, 70, 60);
+        setMaxHSV(255, 255, 255);
 
     } else if (color == "blue") {
 
@@ -332,7 +333,7 @@ void Threshold::setBlur(){
  *  HSV VALUES ARE CAMERA DEPENDENT. CHECK TO SEE WHAT THE DEFAULT HSV VALUES ARE SET TO IN setColor()
  *  BEFORE RUNNING THE PROGRAM.
  *
- *  IT IS RECOMMENDED TO SET YOUR OWN HSV VALUES EITHER THROUGH setMinHSV(), setMaxHSV, OR THROUGH
+ *  IT IS RECOMMENDED TO SET YOUR OWN HSV VALUES EITHER THROUGH setMinHSV(), setMaxHSV(), OR THROUGH
  *  setThreshold().
  */
 

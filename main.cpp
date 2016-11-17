@@ -26,7 +26,7 @@ int main() {
         //Store the frame into source
         bool success = cap.read(source);
 
-        //Copy source image into final
+        //Make sure final is not an empty frame
         source.copyTo(final);
 
         //Check to see if reading frame was successful
