@@ -8,7 +8,6 @@ Mat source, final;
 
 //Initialize object after creating source and final
 Threshold red(&source, "RED", &final);
-Threshold yellow(&source, "YELLOW", &final);
 
 int main() {
 
@@ -37,9 +36,8 @@ int main() {
             break;
         }
 
-        //Call start for the object in the while loop
+        //Call start for the objects in the while loop
         red.start();
-        red.setBlur();
 
         //Create a single imshow window containing only final
         namedWindow("Output", CV_WINDOW_AUTOSIZE);
@@ -50,7 +48,7 @@ int main() {
 
             cout << "ESC key was pressed" << endl;
 
-            //Kill the initialized object and destroy all existing windows
+            //Kill the initialized objects and destroy all existing windows
             red.stop();
             destroyAllWindows();
 

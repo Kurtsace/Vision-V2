@@ -6,7 +6,7 @@ using namespace std;
 
 //Variables
 
-//Focal length
+//Focal length --Camera dependent
 static const int focalLength = 593;
 
 //How many Threshold objects are created
@@ -137,11 +137,12 @@ void Threshold::draw(int index){
     bool isCircle = approxPoly.size() >= 9 && approxPoly.size() <= 16;
 
     //Calculate focal length for the basket
-    cout << getFocalLength(rectWidth) << endl;
+    //cout << getFocalLength(rectWidth) << endl;
 
     //Distance to the object in CM
-    int dist = getDistance(rectWidth);
-    string distance = to_string(dist) + " CM";
+    //int dist = getDistance(rectWidth);
+    //string distance = to_string(dist) + " CM";
+    string distance = "";
 
     //Draw the corresponding bounding boxes and contours with the indexed contour
 
@@ -221,15 +222,8 @@ void Threshold::largestContours(){
  */
 void Threshold::setColor() {
 
-    //Set initial blur values
-    kernelX = 7;
-    kernelY = 7;
-    sigmaX = 3;
-    sigmaY = 3;
-
-    //Set initial HSV values
-    setMaxHSV(255, 255, 255);
-    setMinHSV(0, 0, 0);
+    //Initialize colors
+    initializeColors();
 
     //Check the color and then set the HSV values and draw color
     if (color == "red") {
@@ -358,11 +352,40 @@ void Threshold::setMaxHSV(int hue, int sat, int val) {
     maxVal = val;
 }
 
+//Initialize all the color values, HSV values, Morphological values, and blur values
+void Threshold::initializeColors(){
+
+    //Set initial blur values
+    kernelX = 7;
+    kernelY = 7;
+    sigmaX = 3;
+    sigmaY = 3;
+
+    //Morphological values
+    passes = 2;
+    morphSize = 5;
+
+    //Initialize Scalar values
+    //B, G, R
+    RED = Scalar(0, 0, 255);
+    GREEN = Scalar(0, 255, 0);
+    BLUE = Scalar(255, 0 ,0);
+    WHITE = Scalar(255, 255, 255);
+    YELLOW = Scalar(0, 215, 255);
+    BLACK = Scalar(0, 0, 0);
+
+    //Set initial HSV values
+    setMaxHSV(255, 255, 255);
+    setMinHSV(0, 0, 0);
+}
+
+//Return calculated focal length
 int Threshold::getFocalLength(int pixWidth){
 
     return (pixWidth * 30) / 9;
 }
 
+//Return calculate distance
 int Threshold::getDistance(double pixWidth){
 
     return (9 * focalLength) / pixWidth;

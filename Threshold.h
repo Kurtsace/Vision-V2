@@ -36,12 +36,14 @@ public:
 
 private:
 
+    //Variables
+
+    //Mat frames
     Mat *source, hsv, threshold, *final;
+
+    //Color identifiers
     string color;
     Scalar color0;
-
-
-    //Variables
 
     //Hue, Saturation, Value
     int minHue, maxHue, minSat, maxSat, minVal, maxVal;
@@ -57,12 +59,7 @@ private:
 
     //Scalar values for color
     //B, G, R
-    const Scalar RED = Scalar(0, 0, 255);
-    const Scalar GREEN = Scalar(0, 255, 0);
-    const Scalar BLUE = Scalar(255, 0 ,0);
-    const Scalar WHITE = Scalar(255, 255, 255);
-    const Scalar YELLOW = Scalar(0, 215, 255);
-    const Scalar BLACK = Scalar(0, 0, 0);
+    Scalar RED, GREEN, BLUE, WHITE, YELLOW, BLACK;
 
     //For contours and shape recognition
     vector< vector<Point> > cont;
@@ -73,6 +70,7 @@ private:
     void setColor();
     void largestContours();
     void draw(int index);
+    void initializeColors();
     int getFocalLength(int pixWidth);
     int getDistance(double pixWidth);
 
