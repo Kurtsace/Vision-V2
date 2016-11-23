@@ -4,6 +4,18 @@ Vision V2
 
 ----------------|
 
+November 23, 2016 
+
+	Few major changes.
+	Added a masking operation to the thresholded image. 
+		It detects a color that is in range for thresholding and contours it.
+		it finds the contour with the largest area to draw. 
+		The frame will now only draw the contents of whats INSIDE the contours. 
+		Everything else on the outside of the contour / bounding box or bounding circle will be BLACK. 
+	The final output frame will ONLY show a masked portion of the source frame. 
+	The changes were made to the functions draw() and start(). 
+	
+
 November 14, 2016 
 
 	A few major changes to the structure of the code --See variables

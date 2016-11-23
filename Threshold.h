@@ -39,7 +39,7 @@ private:
     //Variables
 
     //Mat frames
-    Mat *source, hsv, threshold, *final;
+    Mat *source, hsv, threshold, selectiveThresh, *final;
 
     //Color identifiers
     string color;

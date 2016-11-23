@@ -6,6 +6,10 @@ using namespace cv;
 //Create 2 Mat objects, source and final
 Mat source, final;
 
+//Screen size
+int width = 640;
+int height = (width / 4) * 3;
+
 //Initialize object after creating source and final
 Threshold red(&source, "RED", &final);
 
@@ -26,9 +30,6 @@ int main() {
         //Store the frame into source
         bool success = cap.read(source);
 
-        //Make sure final is not an empty frame
-        source.copyTo(final);
-
         //Check to see if reading frame was successful
         if(!success){
 
@@ -38,10 +39,17 @@ int main() {
 
         //Call start for the objects in the while loop
         red.start();
+        red.setThreshold();
 
         //Create a single imshow window containing only final
-        namedWindow("Output", CV_WINDOW_AUTOSIZE);
+        namedWindow("Output", CV_WINDOW_FREERATIO);
+        resizeWindow("Output", width, height);
         imshow("Output", final);
+
+        //Create a small imshow window containing the source frame
+        namedWindow("Source", CV_WINDOW_FREERATIO);
+        resizeWindow("Source", 480, (480 / 4) * 3);
+        imshow("Source", source);
 
         //Break out of the loop if ESC key is pressed
         if(waitKey(30) == 27){

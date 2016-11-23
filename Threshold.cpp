@@ -20,6 +20,8 @@ Threshold::Threshold(Mat *src, string c, Mat *fin) {
     source = src;
     final = fin;
 
+    final->create(src->size(), src->type());
+
     //Make text all lowercase
     transform(c.begin(), c.end(), c.begin(), ::tolower);
     color = c;
@@ -77,6 +79,16 @@ void Threshold::start(){
         //Morphological closing
         morphologyEx(threshold, threshold, MORPH_CLOSE, getStructuringElement(MORPH_CROSS, Size(3 ,3)), Point(-1, -1), passes);
 
+        //Create a selective threshold
+        selectiveThresh.create(source->size(), source->type());
+        //selectiveThresh.setTo(BLACK);
+
+        //Blur the selective threshold for smoother ROI (Region of Interest)
+        GaussianBlur(selectiveThresh, selectiveThresh, Size(9, 9), 3, 3);
+
+        //Copy selectiveThresh into final
+        selectiveThresh.copyTo(*final);
+
         //Clone threshold into a separate Mat object
         Mat threshClone(threshold.clone());
 
@@ -102,7 +114,10 @@ void Threshold::stop(){
     final = NULL;
 }
 
-//Draw the associated bounding box and the contours for the contour with the largest area
+//This method will draw the following:
+//  Text indicating distance, shape, and color
+//  Largest contour with its bounding box / circle
+//  This method will only draw the contents of whats inside the contour, everything else will be black
 void Threshold::draw(int index){
 
     Point2f points[4];
@@ -150,26 +165,48 @@ void Threshold::draw(int index){
     //If its a rectangle draw the contours and a rectangular bounding with text saying the shape, color, and distance
     if(isRect){
 
+        //This will ONLY draw whats inside the contours and bounding box
+        fillConvexPoly(selectiveThresh, approxPoly, WHITE, 8);
+        source->copyTo(*final, selectiveThresh);
+
+        //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
         putText(*final, color + " Rectangle", Point(rectCenterX + 10, rectCenterY),
-                FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
+                FONT_HERSHEY_SIMPLEX, .5, WHITE, 2);
         putText(*final, distance, Point(rectCenterX + 10, rectCenterY + 20),
                 FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
         polylines(*final, poly, true, color0, 2);
     }
 
     //If its a circle draw the contours and a circular bounding with text saying the shape, color, and distance
-    if(isCircle){
+    else if(isCircle){
 
+        //This will only draw whats inside the contour and bounding circle
+        fillConvexPoly(selectiveThresh, approxPoly, WHITE, 8);
+        source->copyTo(*final, selectiveThresh);
+
+        //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
-        putText(*final, color + " Circle", Point(rectCenterX, rectCenterY),
-                FONT_HERSHEY_SIMPLEX, .5, BLACK, 2);
-        putText(*final, distance + " CM", Point(rectCenterX + 10, rectCenterY + 20),
-                FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
+        putText(*final, color + " Circle", Point(rectCenterX + 10, rectCenterY),
+                FONT_HERSHEY_SIMPLEX, .5, WHITE, 2);
+        putText(*final, distance, Point(rectCenterX + 10, rectCenterY + 20),
+                FONT_HERSHEY_SIMPLEX, .40, WHITE, 1);
         circle(*final, center, radius, color0, 2);
+
     }
+
+    //If there is no object print out text on the screen
+    else {
+
+        //Print out "NO OBJECT DETECTED"
+        Point s_center = Point(final->size().height * .4, final->size().width * .4);
+        putText(*final, "NO OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .8, WHITE, 2);
+    }
+
+    //Clear frame to black
+    selectiveThresh.setTo(BLACK);
 }
 
 //Find the largest contours of the thresholded image
@@ -214,11 +251,6 @@ void Threshold::largestContours(){
  *
  *      Orange -- Basically the same as red but brighter, detect by creating red and using setThreshold()
  *      Black -- No reason to threshold and detect black unless you really wanted to, use setThreshold()
- *
- *      If you want to detect an unsupported color just set the string as "CUSTOM" in the constructor and set your own hsv values
- *
- *      --NOTE--
- *          Any custom color to detect will have a black bounding box and contour as default
  */
 void Threshold::setColor() {
 
@@ -253,10 +285,6 @@ void Threshold::setColor() {
     } else if (color == "white") {
 
         color0 = WHITE;
-    } else if(color == "custom") {
-
-        color0 = BLACK;
-
     } else if(color == "" && !initialized){
 
         cout << "Object was not initialized correctly and/or was initialized using the default constructor" << endl;
