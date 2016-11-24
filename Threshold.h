@@ -44,7 +44,7 @@ private:
     //Color identifiers
     string color;
     Scalar color0;
-
+    
     //Hue, Saturation, Value
     int minHue, maxHue, minSat, maxSat, minVal, maxVal;
 

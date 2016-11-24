@@ -117,7 +117,7 @@ void Threshold::stop(){
 //This method will draw the following:
 //  Text indicating distance, shape, and color
 //  Largest contour with its bounding box / circle
-//  This method will only draw the contents of whats inside the contour, everything else will be black
+//  This method will only draw the contents of whats inside the contour, everything else will be black --Mask
 void Threshold::draw(int index){
 
     Point2f points[4];
@@ -125,6 +125,27 @@ void Threshold::draw(int index){
     float radius;
     Rect rect;
     RotatedRect bounding_rect;
+
+    //Coordinates for the rectangle on the center of the screen
+    //Size of the screen
+    int screenX = source->size().width;
+    int screenY = source->size().height;
+
+    //Center of the screen
+    int centerX = screenX / 2;
+    int centerY = screenY / 2;
+
+    //Top left coordinate
+    int topLeftX = centerX - (centerX * .20);
+    int topLeftY = centerY - (centerY * .20);
+
+    //Bottom right coordinate
+    int bottomRightX = centerX + (centerX * .20);
+    int bottomRightY = centerY + (centerY * .20);
+
+    //Final points
+    Point topLeft = Point(topLeftX, topLeftY);
+    Point bottomRight = Point(bottomRightX, bottomRightY);
 
     //Calculate polygon approximation
     approxPolyDP(Mat(cont[index]), approxPoly, arcLength(cont[index], true) * 0.01, true);
@@ -204,6 +225,9 @@ void Threshold::draw(int index){
         Point s_center = Point(final->size().height * .4, final->size().width * .4);
         putText(*final, "NO OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .8, WHITE, 2);
     }
+
+    //Draw the rectangle
+    rectangle(*final, topLeft, bottomRight, WHITE, 2);
 
     //Clear frame to black
     selectiveThresh.setTo(BLACK);

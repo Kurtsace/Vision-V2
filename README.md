@@ -4,6 +4,12 @@ Vision V2
 
 ----------------|
 
+November 24, 2016 
+	
+	Added a rectangle on the center of the window in Mat final.
+		This will be used later on for better tracking and stabilization. 
+
+
 November 23, 2016 
 
 	Few major changes.
