@@ -4,6 +4,15 @@ Vision V2
 
 ----------------|
 
+November 25, 2016 
+	
+	Added a pseudo noise cancellation. 
+		It will remove all noise. 
+		It detects a largest contour and will only draw that, but draws a black convex polygon around all other contours on the threshold window. 
+		0 noise will be detected if and only if there is a largest contour of minimum size 1000 px detected. 
+	
+	Fixed a few rendering bugs and general code optimization. 
+
 November 24, 2016 
 	
 	Added a rectangle on the center of the window in Mat final.

@@ -13,6 +13,9 @@ int height = (width / 4) * 3;
 //Initialize object after creating source and final
 Threshold red(&source, "RED", &final);
 
+//Create imshow windows
+void createWindows();
+
 int main() {
 
     VideoCapture cap(0);
@@ -39,17 +42,9 @@ int main() {
 
         //Call start for the objects in the while loop
         red.start();
-        red.setThreshold();
 
-        //Create a single imshow window containing only final
-        namedWindow("Output", CV_WINDOW_FREERATIO);
-        resizeWindow("Output", width, height);
-        imshow("Output", final);
-
-        //Create a small imshow window containing the source frame
-        namedWindow("Source", CV_WINDOW_FREERATIO);
-        resizeWindow("Source", 480, (480 / 4) * 3);
-        imshow("Source", source);
+        //Show output
+        createWindows();
 
         //Break out of the loop if ESC key is pressed
         if(waitKey(30) == 27){
@@ -65,4 +60,18 @@ int main() {
     }
 
     return 0;
+}
+
+//Create imshow windows
+void createWindows(){
+
+    //Create a single imshow window containing only final
+    namedWindow("Output", CV_WINDOW_FREERATIO);
+    resizeWindow("Output", width, height);
+    imshow("Output", final);
+
+    //Create a small imshow window containing the source frame
+    namedWindow("Source", CV_WINDOW_FREERATIO);
+    resizeWindow("Source", 480, (480 / 4) * 3);
+    imshow("Source", source);
 }

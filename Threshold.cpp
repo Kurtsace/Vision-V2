@@ -80,14 +80,17 @@ void Threshold::start(){
         morphologyEx(threshold, threshold, MORPH_CLOSE, getStructuringElement(MORPH_CROSS, Size(3 ,3)), Point(-1, -1), passes);
 
         //Create a selective threshold
-        selectiveThresh.create(source->size(), source->type());
-        //selectiveThresh.setTo(BLACK);
+        selectiveThresh.create(threshold.size(), threshold.type());
 
         //Blur the selective threshold for smoother ROI (Region of Interest)
-        GaussianBlur(selectiveThresh, selectiveThresh, Size(9, 9), 3, 3);
+        GaussianBlur(selectiveThresh, selectiveThresh, Size(kernelX, kernelY), sigmaX, sigmaY);
 
         //Copy selectiveThresh into final
         selectiveThresh.copyTo(*final);
+
+        //Initialize the inverse frame
+        inverse.create(source->size(), source->type());
+        inverse.setTo(BLACK);
 
         //Clone threshold into a separate Mat object
         Mat threshClone(threshold.clone());
@@ -97,6 +100,9 @@ void Threshold::start(){
 
         //Find and draw the largest contours
         largestContours();
+
+        //Show threshold screen
+        showThresh();
     }
 }
 
@@ -169,7 +175,8 @@ void Threshold::draw(int index){
     for (int j = 0; j < 4; ++j)
         poly[0].push_back(points[j]);
 
-    //Check to see what shape it is
+    //Check to see what shape it is    //Initialize the inverse frame
+    inverse.create(selectiveThresh.size().width, selectiveThresh.size().height, selectiveThresh.type());
     bool isRect = approxPoly.size() >= 4 && approxPoly.size() <= 8;
     bool isCircle = approxPoly.size() >= 9 && approxPoly.size() <= 16;
 
@@ -186,9 +193,8 @@ void Threshold::draw(int index){
     //If its a rectangle draw the contours and a rectangular bounding with text saying the shape, color, and distance
     if(isRect){
 
-        //This will ONLY draw whats inside the contours and bounding box
-        fillConvexPoly(selectiveThresh, approxPoly, WHITE, 8);
-        source->copyTo(*final, selectiveThresh);
+        //Only draw the contents of whats inside the contour
+        regionOfInterest(index);
 
         //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
@@ -203,9 +209,8 @@ void Threshold::draw(int index){
     //If its a circle draw the contours and a circular bounding with text saying the shape, color, and distance
     else if(isCircle){
 
-        //This will only draw whats inside the contour and bounding circle
-        fillConvexPoly(selectiveThresh, approxPoly, WHITE, 8);
-        source->copyTo(*final, selectiveThresh);
+        //Only draw the contents of whats inside the contour
+        regionOfInterest(index);
 
         //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
@@ -224,10 +229,11 @@ void Threshold::draw(int index){
         //Print out "NO OBJECT DETECTED"
         Point s_center = Point(final->size().height * .4, final->size().width * .4);
         putText(*final, "NO OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .8, WHITE, 2);
+
     }
 
     //Draw the rectangle
-    rectangle(*final, topLeft, bottomRight, WHITE, 2);
+    //rectangle(*final, topLeft, bottomRight, WHITE, 2);
 
     //Clear frame to black
     selectiveThresh.setTo(BLACK);
@@ -432,6 +438,29 @@ void Threshold::initializeColors(){
     setMinHSV(0, 0, 0);
 }
 
+//Region of Interest
+//This will create a mask of the inner contour region and outer contour region
+//The inner one will be white and an inverse of that will be created as well
+//It will only draw the frame contents that's inside of the contour and the rest of the frame will be black
+void Threshold::regionOfInterest(int index){
+
+    //This will ONLY draw whats inside the contours and bounding box
+    fillConvexPoly(selectiveThresh, cont[index], WHITE, 8);
+    source->copyTo(*final, selectiveThresh);
+
+    //Create an inverted image of selectiveThresh
+    bitwise_not(selectiveThresh, inverse);
+
+    //Fill the threshold frame with black using the inverse mask
+    threshold.setTo(BLACK, inverse);
+
+    //Fill the threshold frame with white using the detected mask
+    threshold.setTo(WHITE, selectiveThresh);
+
+    //Blur the threshold frame
+    GaussianBlur(threshold, threshold, Size(kernelX, kernelY), sigmaX, sigmaY);
+}
+
 //Return calculated focal length
 int Threshold::getFocalLength(int pixWidth){
 
@@ -443,5 +472,3 @@ int Threshold::getDistance(double pixWidth){
 
     return (9 * focalLength) / pixWidth;
 }
-
-

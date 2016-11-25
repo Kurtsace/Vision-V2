@@ -39,7 +39,7 @@ private:
     //Variables
 
     //Mat frames
-    Mat *source, hsv, threshold, selectiveThresh, *final;
+    Mat *source, hsv, threshold, selectiveThresh, inverse, *final;
 
     //Color identifiers
     string color;
@@ -71,6 +71,7 @@ private:
     void largestContours();
     void draw(int index);
     void initializeColors();
+    void regionOfInterest(int index);
     int getFocalLength(int pixWidth);
     int getDistance(double pixWidth);
 
