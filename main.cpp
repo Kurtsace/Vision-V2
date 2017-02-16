@@ -10,13 +10,15 @@ Mat source, final;
 int width = 640;
 int height = (width / 4) * 3;
 
-//Initialize object after creating source and final
-Threshold red(&source, "RED", &final);
-
 //Create imshow windows
 void createWindows();
 
-int main() {
+int main(int argc, char** argv) {
+
+
+
+    //Initialize object after creating source and final
+    Threshold red(&source, argv[1], &final);
 
     VideoCapture cap(0);
 
@@ -40,8 +42,13 @@ int main() {
             break;
         }
 
+        source.copyTo(final);
+        final.setTo(Scalar(0, 0, 0));
+
         //Call start for the objects in the while loop
         red.start();
+
+        red.setThreshold();
 
         //Show output
         createWindows();
@@ -66,12 +73,11 @@ int main() {
 void createWindows(){
 
     //Create a single imshow window containing only final
-    namedWindow("Output", CV_WINDOW_FREERATIO);
-    resizeWindow("Output", width, height);
+    namedWindow("Output", CV_WINDOW_AUTOSIZE);
     imshow("Output", final);
 
     //Create a small imshow window containing the source frame
-    namedWindow("Source", CV_WINDOW_FREERATIO);
-    resizeWindow("Source", 480, (480 / 4) * 3);
-    imshow("Source", source);
+    //namedWindow("Source", CV_WINDOW_FREERATIO);
+    //resizeWindow("Source", 480, (480 / 4) * 3);
+    //imshow("Source", source);
 }

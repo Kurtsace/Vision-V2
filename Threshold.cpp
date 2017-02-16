@@ -12,15 +12,29 @@ static const int focalLength = 593;
 //How many Threshold objects are created
 static int objects = 0;
 
+static int msg = 0;
+
+//Is an object detected
+static bool objectCentered;
+
 //Constructor
 //Parameter is a Mat image of the original frame and the final frame, a string identifying the color
 Threshold::Threshold(Mat *src, string c, Mat *fin) {
+
+    if(c.empty()){
+
+        cout << "String parameter cannot be empty!" << endl;
+        initialized = false;
+        return;
+
+    }
 
     //Copy the src frame into source
     source = src;
     final = fin;
 
-    final->create(src->size(), src->type());
+    //Uppercase color
+    uColor = c;
 
     //Make text all lowercase
     transform(c.begin(), c.end(), c.begin(), ::tolower);
@@ -32,8 +46,12 @@ Threshold::Threshold(Mat *src, string c, Mat *fin) {
     //Increment objects
     objects++;
 
+    //Add an object id
+    id = objects;
+
     //Set the HSV and Scalar colors
     setColor();
+
 }
 
 //Default constructor
@@ -47,12 +65,14 @@ Threshold::Threshold(){
 //Begins thresholding the source image, finds contours, draws contours, and draws bounding boxes
 void Threshold::start(){
 
+    msg++;
+
     if(initialized){
 
         //Clone source into a separate Mat called src
         Mat src(source->clone());
 
-        //Apply a size 5 median blur to the source image
+        //Apply a size 5 median blur to src
         medianBlur(src, src, 5);
 
         //Convert source material into HSV
@@ -71,7 +91,7 @@ void Threshold::start(){
 
         //Apply a slight Gaussian blur of default size 3x3 with a 0x0 sigma to the thresholded image
         //Values of kernels X and Y & sigma X and Y, can be changed manually using setBlur() --passes value can also be changed
-        GaussianBlur(threshold, threshold, Size(kernelX, kernelY), sigmaX, sigmaY);
+        GaussianBlur(hsv, hsv, Size(kernelX, kernelY), sigmaX, sigmaY);
 
         //Morphological opening
         morphologyEx(threshold, threshold, MORPH_OPEN, getStructuringElement(MORPH_CROSS, Size(3, 3)), Point(-1, -1), passes);
@@ -79,45 +99,55 @@ void Threshold::start(){
         //Morphological closing
         morphologyEx(threshold, threshold, MORPH_CLOSE, getStructuringElement(MORPH_CROSS, Size(3 ,3)), Point(-1, -1), passes);
 
-        //Create a selective threshold
+        //Create a selective threshold (ROI)
         selectiveThresh.create(threshold.size(), threshold.type());
 
         //Blur the selective threshold for smoother ROI (Region of Interest)
         GaussianBlur(selectiveThresh, selectiveThresh, Size(kernelX, kernelY), sigmaX, sigmaY);
 
-        //Copy selectiveThresh into final
-        selectiveThresh.copyTo(*final);
-
         //Initialize the inverse frame
-        inverse.create(source->size(), source->type());
+        inverse.create(final->size(), final->type());
         inverse.setTo(BLACK);
 
         //Clone threshold into a separate Mat object
         Mat threshClone(threshold.clone());
 
+        //Create an inverted threshold image
+        threshClone.copyTo(invertedThresh, selectiveThresh);
+
+        //Invert the threshold to get the colors that is not detected
+        bitwise_not(threshClone, invertedThresh);
+
         //Find the contours from the thresholded image
-        findContours(threshClone, cont, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+        findContours(threshClone, cont, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
         //Find and draw the largest contours
         largestContours();
 
-        //Show threshold screen
-        showThresh();
+        //Draw the display
+        drawHUD();
+
+    } else if(!initialized && msg <= 1) {
+
+        cout << "Object has not been initialized properly" << endl;
+        return;
     }
 }
 
 //Kill the object --Use stop() once you are finished using the object to free memory
 void Threshold::stop(){
 
-    //Delete all windows
-    destroyAllWindows();
+    if(initialized) {
+        //Delete all windows
+        destroyAllWindows();
 
-    //Delete the pointers and free memory
-    delete source;
-    delete final;
+        //Delete the pointers and free memory
+        delete source;
+        delete final;
 
-    source = NULL;
-    final = NULL;
+        source = NULL;
+        final = NULL;
+    }
 }
 
 //This method will draw the following:
@@ -132,27 +162,6 @@ void Threshold::draw(int index){
     Rect rect;
     RotatedRect bounding_rect;
 
-    //Coordinates for the rectangle on the center of the screen
-    //Size of the screen
-    int screenX = source->size().width;
-    int screenY = source->size().height;
-
-    //Center of the screen
-    int centerX = screenX / 2;
-    int centerY = screenY / 2;
-
-    //Top left coordinate
-    int topLeftX = centerX - (centerX * .20);
-    int topLeftY = centerY - (centerY * .20);
-
-    //Bottom right coordinate
-    int bottomRightX = centerX + (centerX * .20);
-    int bottomRightY = centerY + (centerY * .20);
-
-    //Final points
-    Point topLeft = Point(topLeftX, topLeftY);
-    Point bottomRight = Point(bottomRightX, bottomRightY);
-
     //Calculate polygon approximation
     approxPolyDP(Mat(cont[index]), approxPoly, arcLength(cont[index], true) * 0.01, true);
 
@@ -165,8 +174,9 @@ void Threshold::draw(int index){
     double rectWidth = rect.br().x - rect.tl().x;
 
     //Calculate center points of rectangle
-    int rectCenterX = rect.x + rect.width / 2;
-    int rectCenterY = rect.y + rect.height / 2;
+    rectCenterX = rect.x + rect.width / 2;
+    rectCenterY = rect.y + rect.height / 2;
+    Point s_center;
 
     //Store points for the bounding rectangle
     bounding_rect.points(points);
@@ -175,68 +185,78 @@ void Threshold::draw(int index){
     for (int j = 0; j < 4; ++j)
         poly[0].push_back(points[j]);
 
-    //Check to see what shape it is    //Initialize the inverse frame
-    inverse.create(selectiveThresh.size().width, selectiveThresh.size().height, selectiveThresh.type());
-    bool isRect = approxPoly.size() >= 4 && approxPoly.size() <= 8;
-    bool isCircle = approxPoly.size() >= 9 && approxPoly.size() <= 16;
+    //Check to see what shape it is
+    isRect = approxPoly.size() >= 4 && approxPoly.size() <= 8;
+    isCircle = approxPoly.size() >= 9 && approxPoly.size() <= 16;
 
-    //Calculate focal length for the basket
-    //cout << getFocalLength(rectWidth) << endl;
-
-    //Distance to the object in CM
-    //int dist = getDistance(rectWidth);
-    //string distance = to_string(dist) + " CM";
-    string distance = "";
+    //Calculate the x and y coordinates of the object
+    string coordinates = "(" + to_string(rectCenterX) + " , " + to_string(rectCenterY) + ")";
 
     //Draw the corresponding bounding boxes and contours with the indexed contour
 
     //If its a rectangle draw the contours and a rectangular bounding with text saying the shape, color, and distance
     if(isRect){
 
+        //Set detected to true selectiveThresh.setTo(BLACK);
+        threshold.setTo(BLACK);
+
+        source->copyTo(*final, selectiveThresh);
+        detected = true;
+
         //Only draw the contents of whats inside the contour
         regionOfInterest(index);
 
         //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
+        line(*final, Point(rectCenterX, rectCenterY), Point(final->size().width / 2, final->size().height / 2), color0, 2);
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
+        polylines(*final, poly, true, color0, 2);
+
         putText(*final, color + " Rectangle", Point(rectCenterX + 10, rectCenterY),
                 FONT_HERSHEY_SIMPLEX, .5, WHITE, 2);
-        putText(*final, distance, Point(rectCenterX + 10, rectCenterY + 20),
-                FONT_HERSHEY_SIMPLEX, .40, BLACK, 1);
-        polylines(*final, poly, true, color0, 2);
+        putText(*final, coordinates, Point(rectCenterX + 10, rectCenterY + 20),
+                FONT_HERSHEY_SIMPLEX, .40, WHITE, 1);
+
+        //Print out "OBJECT DETECTED"
+        s_center = Point(final->size().width * 0.01, final->size().height * .05 * id);
+        putText(*final, uColor + " OBJECT DETECTED IN " + quadrant, s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
+
+        //Set current object position
+        objPos = Point(rectCenterX, rectCenterY);
     }
 
     //If its a circle draw the contours and a circular bounding with text saying the shape, color, and distance
     else if(isCircle){
 
+        //Set detected to true
+        detected = true;
+
         //Only draw the contents of whats inside the contour
         regionOfInterest(index);
 
         //Draw the contour outline and text
         drawContours(*final, cont, index, color0, 2);
+        line(*final, Point(rectCenterX, rectCenterY), Point(final->size().width / 2, final->size().height / 2), color0, 2);
         circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
-        putText(*final, color + " Circle", Point(rectCenterX + 10, rectCenterY),
-                FONT_HERSHEY_SIMPLEX, .5, WHITE, 2);
-        putText(*final, distance, Point(rectCenterX + 10, rectCenterY + 20),
-                FONT_HERSHEY_SIMPLEX, .40, WHITE, 1);
         circle(*final, center, radius, color0, 2);
 
+        putText(*final, color + " Circle", Point(rectCenterX + 10, rectCenterY),
+                FONT_HERSHEY_SIMPLEX, .5, WHITE, 2);
+        putText(*final, coordinates, Point(rectCenterX + 10, rectCenterY + 20),
+                FONT_HERSHEY_SIMPLEX, .40, WHITE, 1);
+
+        //Print out "OBJECT DETECTED"
+        s_center = Point(final->size().width * 0.01, final->size().height * .05 * id);
+        putText(*final, uColor + " OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
+
+        //Set the current object position
+        objPos = Point(rectCenterX, rectCenterY);
+
     }
-
-    //If there is no object print out text on the screen
-    else {
-
-        //Print out "NO OBJECT DETECTED"
-        Point s_center = Point(final->size().height * .4, final->size().width * .4);
-        putText(*final, "NO OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .8, WHITE, 2);
-
-    }
-
-    //Draw the rectangle
-    //rectangle(*final, topLeft, bottomRight, WHITE, 2);
 
     //Clear frame to black
     selectiveThresh.setTo(BLACK);
+
 }
 
 //Find the largest contours of the thresholded image
@@ -247,7 +267,7 @@ void Threshold::draw(int index){
 void Threshold::largestContours(){
 
     //Determine the largest contour area to draw
-    double largestArea = 1000;
+    largestArea = 1000;
     int largestIndex = -1;
 
     for (int i = 0; i < cont.size(); i++) {
@@ -261,13 +281,13 @@ void Threshold::largestContours(){
     }
 
     //Make sure there is a largest contour before drawing
-    if(largestIndex != -1){
+    if(largestIndex != -1 && largestArea > 1000){
 
         draw(largestIndex);
     }
 }
 
-//Sets the current color (color0) to the color specified in the string value and also sets the corresponding HSV values
+//Sets the current color (color0) to the color specified in the string value and also sets the corresponding estimated HSV values
 //--Can be manually set using setHSV()
 /* Currently only supports the colors:
  *
@@ -330,60 +350,70 @@ void Threshold::setColor() {
 //Override default Threshold presets for the current image with a manually controlled one
 void Threshold::setThreshold(){
 
-    createThreshControl();
-    showThresh();
+    if(initialized){
+
+        createThreshControl();
+        showThresh();
+    }
 }
 
 //Create the control windows and track bars for thresholding upon calling this function
 void Threshold::createThreshControl(){
 
     //Create track bars in "Control" window
-    namedWindow("Control" ,CV_WINDOW_AUTOSIZE); //create a window called "Control"
+    string name = uColor + " Control";
+    namedWindow(name ,CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
     //Hue, Saturation, and Value
-    cvCreateTrackbar("LowH", "Control", &minHue, 179); //Hue (0-179)
-    cvCreateTrackbar("HighH", "Control", &maxHue, 179);
+    createTrackbar("LowH", name, &minHue, 179); //Hue (0-179)
+    createTrackbar("HighH", name, &maxHue, 179);
 
-    cvCreateTrackbar("LowS", "Control", &minSat, 255); //Saturation (0 - 255)
-    cvCreateTrackbar("HighS", "Control", &maxSat, 255);
+    createTrackbar("LowS", name, &minSat, 255); //Saturation (0 - 255)
+    createTrackbar("HighS", name, &maxSat, 255);
 
-    cvCreateTrackbar("LowV", "Control", &minVal, 255); //Value (0-255)
-    cvCreateTrackbar("HighV", "Control", &maxVal, 255);
+    createTrackbar("LowV", name, &minVal, 255); //Value (0-255)
+    createTrackbar("HighV", name, &maxVal, 255);
 
     //Morphological operator
 
     //Create a track bar for the amount of Morphological passes to apply, max value is 10
-    cvCreateTrackbar("Passes", "Blur", &passes, 10);
+    createTrackbar("Passes", name, &passes, 10);
 
     //Create a track bar for the size of the MORPH_SHAPE, max value is 25
-    cvCreateTrackbar("Shape Size", "Blur",&morphSize, 25);
+    createTrackbar("Shape Size", name, &morphSize, 25);
 
 }
 
 //Shows the threshold window
 void Threshold::showThresh(){
 
-    namedWindow(color + " Threshold", CV_WINDOW_FREERATIO);
-    resizeWindow(color + " Threshold", 480, 360);
-    imshow(color + " Threshold", threshold);
+    if(initialized) {
+
+        namedWindow(color + " Threshold", CV_WINDOW_FREERATIO);
+        resizeWindow(color + " Threshold", 480, 360);
+        imshow(color + " Threshold", threshold);
+
+    }
 }
 
 //Override for the default values of the Gaussian blur, size of the Morph shape, and also the Morphological passes
 void Threshold::setBlur(){
 
-    //Create a window of the color name + blur
-    namedWindow("Blur", CV_WINDOW_AUTOSIZE);
+    if(initialized) {
+        //Create a window of the color name + blur
+        namedWindow(uColor + "Blur", CV_WINDOW_AUTOSIZE);
 
-    //Create a track bar for kernel X and Y, max value is 20 --Value cannot be even
-    cvCreateTrackbar("Kernel X", "Blur", &kernelX, 20);
-    cvCreateTrackbar("Kernel Y", "Blur", &kernelY, 20);
+        //Create a track bar for kernel X and Y, max value is 20 --Value cannot be even
+        createTrackbar("Kernel X", uColor + "Blur", &kernelX, 20);
+        createTrackbar("Kernel Y", uColor + "Blur", &kernelY, 20);
 
-    //Create a track bar for sigma X and Y, max value is 10
-    cvCreateTrackbar("Sigma X", "Blur", &sigmaX, 20);
-    cvCreateTrackbar("Sigma Y", "Blur", &sigmaY, 20);
+        //Create a track bar for sigma X and Y, max value is 10
+        createTrackbar("Sigma X", uColor + "Blur", &sigmaX, 20);
+        createTrackbar("Sigma Y", uColor + "Blur", &sigmaY, 20);
 
-    //Show the threshold
-    showThresh();
+        //Show the threshold
+        showThresh();
+    }
 }
 
 //--NOTE FOR HSV VALUES--
@@ -444,21 +474,95 @@ void Threshold::initializeColors(){
 //It will only draw the frame contents that's inside of the contour and the rest of the frame will be black
 void Threshold::regionOfInterest(int index){
 
-    //This will ONLY draw whats inside the contours and bounding box
-    fillConvexPoly(selectiveThresh, cont[index], WHITE, 8);
-    source->copyTo(*final, selectiveThresh);
+    if(detected){
 
-    //Create an inverted image of selectiveThresh
-    bitwise_not(selectiveThresh, inverse);
+        //This will ONLY draw whats inside the contours and bounding box
+        fillConvexPoly(selectiveThresh, cont[index], WHITE, 8);
 
-    //Fill the threshold frame with black using the inverse mask
-    threshold.setTo(BLACK, inverse);
+        //Create an inverted image of selectiveThresh
+        bitwise_not(selectiveThresh, inverse);
 
-    //Fill the threshold frame with white using the detected mask
-    threshold.setTo(WHITE, selectiveThresh);
+        //Fill the threshold frame with black using the inverse mask
+        threshold.setTo(BLACK, inverse);
 
-    //Blur the threshold frame
-    GaussianBlur(threshold, threshold, Size(kernelX, kernelY), sigmaX, sigmaY);
+        //Fill the threshold frame with white using the detected mask
+        threshold.setTo(WHITE, selectiveThresh);
+
+        //Blur the threshold frame
+        GaussianBlur(threshold, threshold, Size(kernelX, kernelY), sigmaX, sigmaY);
+
+        //Draw the contents of the contour
+        source->copyTo(*final, selectiveThresh);
+    } else {
+
+        selectiveThresh.setTo(BLACK);
+        threshold.setTo(BLACK);
+
+        source->copyTo(*final, selectiveThresh);
+    }
+}
+
+//Draw a HUD -- WILL BE USED FOR ACCURATE TRACKING OF BALL POSITION USING A VIRTUAL HUD
+void Threshold::drawHUD(){
+
+    //Coordinates for the rectangle on the center of the screen
+
+    //Size of the screen
+    int screenX = source->size().width;
+    int screenY = source->size().height;
+
+    //Center of the screen
+    int centerX = screenX / 2;
+    int centerY = screenY / 2;
+
+    //Top left coordinate
+    int topLeftX = centerX - (centerX * .20);
+    int topLeftY = centerY - (centerY * .20);
+
+    //Bottom right coordinate
+    int bottomRightX = centerX + (centerX * .20);
+    int bottomRightY = centerY + (centerY * .20);
+
+    //Final points
+    Point topLeft = Point(topLeftX, topLeftY);
+    Point bottomRight = Point(bottomRightX, bottomRightY);
+
+    //Draw a white rectangle in the center of the screen
+    // --Turns green if the object center is within the rectangles bounds
+
+    if(!objectCentered)
+        rectangle(*final, topLeft, bottomRight, WHITE, 2);
+
+    if(rectCenterX <= bottomRightX && rectCenterX >= topLeftX
+       && rectCenterY <= bottomRightY && rectCenterY >= topLeftY && (isRect || isCircle)) {
+
+        objectCentered = true;
+        rectangle(*final, topLeft, bottomRight, GREEN, 2);
+
+    } else { objectCentered = false; }
+
+    //Draw crosshairs
+    line(*final, Point(centerX, 0), Point(centerX, screenY), WHITE, 1);
+    line(*final, Point(0, centerY), Point(screenX, centerY), WHITE, 1);
+
+    //If there is no object print out text on the screen
+    if(!(isRect) && !(isCircle)) {
+
+        //Detected is false
+        detected = false;
+
+        //Print out "NO OBJECT DETECTED"
+        Point s_center = Point(final->size().width * 0.01, final->size().height * .05 * id);
+        putText(*final, "NO " + uColor + " OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
+
+    }
+
+}
+
+//Returns a Point containing the position of the ball --CENTER POINT OF THE BALL
+Point Threshold::getObjPos(){
+
+    return objPos;
 }
 
 //Return calculated focal length

@@ -33,20 +33,23 @@ public:
     void showThresh();
     void setBlur();
 
-
 private:
 
     //Variables
 
     //Mat frames
-    Mat *source, hsv, threshold, selectiveThresh, inverse, *final;
+    Mat *source, hsv, threshold, selectiveThresh, inverse, invertedThresh, *final;
 
     //Color identifiers
-    string color;
+    string color, uColor;
     Scalar color0;
-    
-    //Hue, Saturation, Value
-    int minHue, maxHue, minSat, maxSat, minVal, maxVal;
+
+    //Object #
+    int id;
+
+    //HSV values
+    int minHue, minSat, minVal;
+    int maxHue, maxSat, maxVal;
 
     //For the Morphological operator
     int passes, morphSize;
@@ -57,23 +60,42 @@ private:
     //Initialize
     bool initialized;
 
+    //What shape is it
+    bool isRect, isCircle;
+
+    //Is an object detected
+    bool detected;
+
+    //Center coordinates for object
+    int rectCenterX, rectCenterY;
+
+    //Contour size
+    double largestArea;
+
+    //Position of the ball --CENTER POINT
+    Point objPos;
+    string quadrant;
+
     //Scalar values for color
     //B, G, R
     Scalar RED, GREEN, BLUE, WHITE, YELLOW, BLACK;
 
     //For contours and shape recognition
     vector< vector<Point> > cont;
+    vector< Vec4i > hierarchy;
     vector< Point > approxPoly;
 
     //Private methods
     void createThreshControl();
     void setColor();
     void largestContours();
+    void drawHUD();
     void draw(int index);
     void initializeColors();
     void regionOfInterest(int index);
     int getFocalLength(int pixWidth);
     int getDistance(double pixWidth);
+    Point getObjPos();
 
 };
 
