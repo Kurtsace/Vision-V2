@@ -61,6 +61,7 @@ Vision::Vision(){
 
 void Vision::sportMode(Sport event){
 
+
 }
 
 //Begins thresholding the source image, finds contours, draws contours, and draws bounding boxes
@@ -92,7 +93,7 @@ void Vision::start(){
 
         //Threshold the image
         //inRange(hsv, Scalar(minHue, minSat, minVal), Scalar(maxHue, maxSat, maxVal), threshold);
-        threshold(gray, binary, min, 255, THRESH_BINARY);
+        threshold(gray, binary, min, max, THRESH_BINARY);
 
         //--ERROR checking-- values cannot be even or 0
         if(kernelX % 2 == 0 && kernelX <= 20)
