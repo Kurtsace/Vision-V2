@@ -1,0 +1,3 @@
+/home/kurt/ClionProjects/Vision V2/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/kurt/ClionProjects/Vision V2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/kurt/ClionProjects/Vision V2/cmake-build-debug/CMakeFiles/Vision_V2.dir
