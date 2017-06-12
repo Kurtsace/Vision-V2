@@ -59,9 +59,55 @@ Vision::Vision(){
     setColor();
 }
 
-void Vision::sportMode(Sport event){
+void Vision::mode(int sport, int robot){
 
 
+    switch(robot){
+
+        case ROBOT_ARASH:
+            break;
+        case ROBOT_POLARIS:
+            break;
+        case ROBOT_DARWIN_OP:
+            break;
+        case ROBOT_DARWIN_OP2:
+            break;
+        case WEBCAM:
+            break;
+        default:
+
+            cout << "Robot type undefined! -- Switching to default parameters" << endl;
+            break;
+    }
+
+    switch(sport){
+
+        case SPORT_ARCHERY:
+            ARCHERY = true;
+            break;
+        case SPORT_BASKETBALL:
+            BASKETBALL = true;
+            break;
+        case SPORT_MARATHON:
+            MARATHON = true;
+            break;
+        case SPORT_ROBOCUP:
+            ROBOCUP = true;
+            break;
+        case SPORT_SOCCER:
+            SOCCER = true;
+            break;
+        case SPORT_SPRINT:
+            SPRINT = true;
+            break;
+        case SPORT_WEIGHTLIFTING:
+            WEIGHTLIFTING = true;
+            break;
+        default:
+
+            cout << "Undefined sport! -- Switching to default vision processing" << endl;
+            break;
+    }
 }
 
 //Begins thresholding the source image, finds contours, draws contours, and draws bounding boxes
@@ -80,22 +126,11 @@ void Vision::start(){
 
         src.copyTo(*final);
 
-        //Create a gray scale copy of source
-        cvtColor(src, gray, COLOR_BGR2GRAY);
-
-        //Apply a size 3 median blur to src
-        medianBlur(src, src, 3);
-
-        // /Convert source material into HSV
-        cvtColor(src, hsv, COLOR_BGR2HSV);
-
-        equalizeHist(gray, gray);
-
-        //Threshold the image
-        //inRange(hsv, Scalar(minHue, minSat, minVal), Scalar(maxHue, maxSat, maxVal), threshold);
-        threshold(gray, binary, min, max, THRESH_BINARY);
+        //Apply a size X by Y./ub.n3x2 Gaussian blur to src
+        GaussianBlur(src, src, Size(kernelX, kernelY), sigmaX, sigmaY);
 
         //--ERROR checking-- values cannot be even or 0
+        //Used for Gaussian blur
         if(kernelX % 2 == 0 && kernelX <= 20)
             kernelX++;
         if(kernelY % 2 == 0 && kernelY <= 20)
@@ -107,17 +142,61 @@ void Vision::start(){
         if(edgeThresh < 3)
             edgeThresh++;
 
-        //Morphological opening
-        morphologyEx(binary, binary, MORPH_OPEN, getStructuringElement(MORPH_CROSS, Size(5, 5)), Point(-1, -1), passes);
+        //Check which sport is to be processed
+        if(ROBOCUP){
 
-        //Morphological closing
-        morphologyEx(binary, binary, MORPH_CLOSE, getStructuringElement(MORPH_CROSS, Size(5 ,5)), Point(-1, -1), passes);
+            //For single channel thresholding
+            min = minRGB;
+            max = maxRGB;
 
-        //Clone threshold into a separate Mat object
-        Mat threshClone(binary.clone());
+            //Create a binary image and calculate contours for the ball
+            // -- SINGLE CHANNEL
+            createThresh(contour, true, CV_BGR2GRAY);
 
-        //Find the contours from the thresholded image
-        findContours(threshClone, cont, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+            //Find and draw the largest contours
+            //largestContours(filterNoise(cont));
+            roundestContour(filterNoise(contour));
+
+        } else if(SPRINT){
+
+            //Sprint vision
+        } else if(BASKETBALL){
+
+            vector<vector<Point>> basketContour;
+
+            //Create 2 binary images -- One for basket and one for ball
+            //Then calculate contours
+            createThresh(basketContour, false, CV_BGR2HSV);
+            createThresh(contour, false, CV_BGR2HSV);
+
+            //Find and draw the roundest contour
+            if(detectCirc) {
+                roundestContour(filterNoise(contour));
+            }
+
+            //Find and draw the largest contour
+            if(detectRectangle) {
+                largestContour(filterNoise(basketContour));
+            }
+
+            //Basketball vision
+        } else if(MARATHON){
+
+            //Marathon vision
+        } else if(SOCCER){
+
+            //Soccer vision
+        } else if(ARCHERY){
+
+            //Archery vision
+        } else if(WEIGHTLIFTING){
+
+            //Weightlifting code
+        } else {
+
+            cout << "A sport/event has not been specified! -- Switching to default vision processing" << endl ;
+        }
+
 
 //        //Initialize line segment detector with standard refinement
 //        lineSeg = createLineSegmentDetector(LSD_REFINE_ADV);
@@ -128,12 +207,6 @@ void Vision::start(){
 //        //Draw the detected line segments
 //        lineSeg->drawSegments(*final, lines);
 
-        //Find and draw the largest contours
-        //largestContours(filterNoise(cont));
-        roundestContour(filterNoise(cont));
-
-        min = minHue;
-        max = maxHue;
 
         //Draw the display
         drawHUD();
@@ -145,6 +218,40 @@ void Vision::start(){
     }
 }
 
+
+//Threshold operations
+void Vision::createThresh(vector<vector<Point>> inputArray, bool singleChannel, int method){
+
+    Mat converted;
+    Mat binary;
+
+    //Convert to what is specified
+    cvtColor(src, converted, method);
+
+    //Threshold the image
+    if(singleChannel){
+
+        threshold(converted, binary, min, max, THRESH_BINARY);
+    } else {
+
+        inRange(converted, Scalar(minHue, minSat, minVal), Scalar(maxHue, maxSat, maxVal), binary);
+    }
+
+    //Morphological opening
+    morphologyEx(binary, binary, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1), passes);
+
+    //Morphological closing
+    morphologyEx(binary, binary,MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE, Size(5 ,5)), Point(-1, -1), passes);
+
+    //Clone threshold into a separate Mat object
+    Mat threshClone(binary.clone());
+
+    //Find the contours from the thresholded image
+    findContours(threshClone, inputArray, CV_RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
+    binary.copyTo(tempOutFrame);
+
+}
 
 //Kill the object --Use stop() once you are finished using the object to free memory
 void Vision::stop(){
@@ -168,11 +275,13 @@ void Vision::stop(){
 //   no very large object detected
 // --NOTE--
 //      If you run into problems trying to detect small objects or far away objects set it to a smaller value or 0
-void Vision::largestContours(vector<vector<Point>> inputArray){
+void Vision::largestContour(vector<vector<Point>> inputArray){
+
+    vector<Point> approx;
 
     //Determine the largest contour area to draw
-    largestArea = 500;
-    double circularity;
+    largestArea = 300;
+
     int largestIndex = -1;
 
     for (int i = 0; i < inputArray.size(); i++) {
@@ -185,14 +294,15 @@ void Vision::largestContours(vector<vector<Point>> inputArray){
         }
     }
 
-    //Make sure there is a largest contour before drawing
-    if(circularity >= .3){
+    approxPolyDP(inputArray, approx, arcLength(inputArray[largestIndex], true) * 0.02, true);
 
-        draw(largestIndex, inputArray);
-    }
+    //Make sure there is a largest contour before drawing
+    draw(largestIndex, inputArray, approx);
 }
 
 void Vision::roundestContour(vector<vector<Point>> inputArray){
+
+    vector<Point> approx;
 
     double circularity;
     double roundest = .1;
@@ -208,24 +318,23 @@ void Vision::roundestContour(vector<vector<Point>> inputArray){
         }
     }
 
-    if(circularity >= .25 && contourArea(inputArray[index]) > 800)
-        draw(index, inputArray);
+    approxPolyDP(inputArray, approx, arcLength(inputArray[index], true) * 0.02, true);
+
+    if(circularity >= .15 && contourArea(inputArray[index]) > 200)
+        draw(index, inputArray, approx);
 }
 
 //This method will draw the following:
 //  Text indicating distance, shape, and color
 //  Largest contour with its bounding box / circle
 //  This method will only draw the contents of whats inside the contour, everything else will be black --Mask
-void Vision::draw(int index, vector<vector<Point>> cont){
+void Vision::draw(int index, vector<vector<Point>> cont, vector<Point> approx){
 
     Point2f points[4];
     Point2f center;
     float radius;
     Rect rect;
     RotatedRect bounding_rect;
-
-    //Calculate polygon approximation
-    approxPolyDP(Mat(cont[index]), approxPoly, arcLength(cont[index], true) * 0.015, true);
 
     //Compute the bounding rect, minimum enclosing circle
     rect = boundingRect(cont[index]);
@@ -254,9 +363,12 @@ void Vision::draw(int index, vector<vector<Point>> cont){
 
     //Draw the corresponding bounding boxes and contours with the indexed contour
 
+    vector<vector<Point>> temp;
+    temp.push_back(approx);
+
     if(detectRectangle) {
 
-        isRect = approxPoly.size() >= 4 && approxPoly.size() <= 8;
+        isRect = approx.size() >= 4 && approx.size() <= 8;
 
         //If its a rectangle draw the contours and a rectangular bounding with text saying the shape, color, and distance
         if (isRect) {
@@ -265,7 +377,7 @@ void Vision::draw(int index, vector<vector<Point>> cont){
             detected = true;
 
             //Draw the contour outline and text
-            drawContours(*final, filteredContour, index, color0, 2);
+            drawContours(*final, temp, 0, color0, 2);
             line(*final, Point(rectCenterX, rectCenterY), Point(final->size().width / 2, final->size().height / 2),
                  color0, 2);
             circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
@@ -288,7 +400,7 @@ void Vision::draw(int index, vector<vector<Point>> cont){
 
     if(detectCirc) {
 
-        isCircle = approxPoly.size() >= 6 && approxPoly.size() <= 18;
+        isCircle = approx.size() >= 6 && approx.size() <= 18;
 
         //If its a circle draw the contours and a circular bounding with text saying the shape, color, and distance
         if (isCircle) {
@@ -297,7 +409,7 @@ void Vision::draw(int index, vector<vector<Point>> cont){
             detected = true;
 
             //Draw the contour outline and text
-            //drawContours(*final, filteredContour, index, color0, 2);
+            drawContours(*final, temp, 0, color0, 2);
             line(*final, Point(rectCenterX, rectCenterY), Point(final->size().width / 2, final->size().height / 2),
                  color0, 2);
             circle(*final, Point(rectCenterX, rectCenterY), 5, WHITE, 2);
@@ -319,8 +431,6 @@ void Vision::draw(int index, vector<vector<Point>> cont){
     }
 
 }
-
-
 
 //Draw a HUD -- WILL BE USED FOR ACCURATE TRACKING OF BALL POSITION USING A VIRTUAL HUD
 void Vision::drawHUD(){
@@ -366,15 +476,25 @@ void Vision::drawHUD(){
     line(*final, Point(0, centerY), Point(screenX, centerY), WHITE, 1);
 
     //If there is no object print out text on the screen
-    if(!(isRect) && !(isCircle)) {
+    if(!(isRect)) {
 
         //Detected is false
         detected = false;
 
         //Print out "NO OBJECT DETECTED"
         Point s_center = Point(final->size().width * 0.01, final->size().height * .05 * id);
-        putText(*final, "NO " + uColor + " OBJECT DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
+        putText(*final, "NO " + uColor + " BASKET DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
 
+    }
+
+    if(!isCircle){
+
+        //Detected is false
+        detected = false;
+
+        //Print out "NO OBJECT DETECTED"
+        Point s_center = Point(final->size().width * 0.01, final->size().height * .05 * (id + 1));
+        putText(*final, "NO " + uColor + " BALL DETECTED", s_center, FONT_HERSHEY_SIMPLEX, .3, WHITE, 1);
     }
 
 }
@@ -449,42 +569,24 @@ vector<vector<Point>> Vision::filterNoise(vector<vector<Point>> contour){
 
     vector<vector<Point>> filter;
 
-    binary.setTo(BLACK);
+    vector<Point> polygon;
 
-    for(int i = 0; i < contour.size(); i++){
+    for(int i = 0; i < contour.size(); i++) {
 
-        if(contourArea(contour[i]) > 200){
+        if (contourArea(contour[i]) > 500) {
 
             filter.push_back(contour[i]);
-
-            drawContours(binary, contour, i, WHITE, -1, 8);
         }
     }
 
-
-    //Morphological opening
-    morphologyEx(binary, binary, MORPH_OPEN, getStructuringElement(MORPH_CROSS, Size(3 ,3)), Point(-1, -1), passes);
-
-    //Morphological closing
-    morphologyEx(binary, binary, MORPH_CLOSE, getStructuringElement(MORPH_CROSS, Size(3 ,3)), Point(-1, -1), passes);
-
-    //Blur the thresholded image
-    GaussianBlur(binary, binary, Size(kernelX, kernelY), sigmaX, sigmaY);
-
     filtered = true;
 
-    return filter;
+
+    if(filter.size() != -1){
+
+        return filter;
+    }
 }
-
-void Vision::determineShape(vector<vector<Point>> contour, int index){
-
-    Mat shape;
-    shape.create(binary.size(), binary.type());
-    shape.setTo(BLACK);
-
-    drawContours(shape, contour, index, WHITE, -1, 8);
-}
-
 
 //Override default Threshold presets for the current image with a manually controlled one
 void Vision::setThreshold(){
@@ -572,14 +674,26 @@ void Vision::setMaxHSV(int hue, int sat, int val) {
     maxVal = val;
 }
 
+//Set min and max values for thresholding -- Uses trackbars
 void Vision::setSingleThreshold() {
 
-    imshow("Binary", binary);
+    imshow("Binary", tempOutFrame);
 
-    createTrackbar("min", "Binary", &minHue, 255);
-    createTrackbar("max", "Binary", &maxHue, 255);
+    createTrackbar("min", "Binary", &minRGB, 255);
+    createTrackbar("max", "Binary", &maxRGB, 255);
 }
 
+//Estimates a real world distance to detected object -- In CM
+int Vision::getDistance(){
+
+
+}
+
+//Set the estimated real world distance of the object -- In CM
+void Vision::setDistance(vector<Point> object, int focalLength) {
+
+    int objectArea = contourArea(object);
+}
 
 //Initialize all the color values, HSV values, Morphological values, and blur values
 void Vision::initializeColors(){

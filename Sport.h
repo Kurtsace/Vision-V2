@@ -17,4 +17,13 @@ enum Sport{
     SPORT_ARCHERY,
 };
 
+enum Robot{
+
+    ROBOT_ARASH,
+    ROBOT_POLARIS,
+    ROBOT_DARWIN_OP,
+    ROBOT_DARWIN_OP2,
+    WEBCAM,
+};
+
 #endif //VISION_V2_SPORT_H

@@ -11,6 +11,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/features2d.hpp>
+#include <opencv2/core/core.hpp>
 #include "Sport.h"
 #include <iostream>
 
@@ -36,7 +37,9 @@ public:
     void setBlur();
     void detectRect(bool condition);
     void detectCircle(bool condition);
+    void mode(int sport, int robot);
     Point getPos();
+    int getDistance();
 
 
 private:
@@ -44,18 +47,34 @@ private:
     //Variables
 
     //Mat frames
-    Mat *source, src, hsv, binary, gray, *final;
+    Mat *source, src, tempOutFrame, *final;
+
+    //Vectors
+    vector < vector<Point> > contour;
+    vector< Point > approx;
 
     //Color identifiers
     string color, uColor;
     Scalar color0;
 
+    //Sport/Events to process
+    bool ROBOCUP, SPRINT, MARATHON, BASKETBALL, WEIGHTLIFTING, SOCCER, ARCHERY;
+
     //Object #
     int id;
+
+    //Focal length
+    int focalLength;
+
+    //Real world distance -- In CM
+    int distance;
 
     //HSV values
     int minHue, minSat, minVal;
     int maxHue, maxSat, maxVal;
+
+    //Single channel values
+    int minRGB, maxRGB;
 
     //For the Morphological operator
     int passes, morphSize;
@@ -89,10 +108,6 @@ private:
     Scalar RED, GREEN, BLUE, WHITE, YELLOW, BLACK;
 
     //For contours and shape recognition
-    vector< vector<Point> > cont;
-    vector< Vec4i > hierarchy;
-    vector< Point > approxPoly;
-    vector<vector<Point>> filteredContour;
     bool filtered = false;
 
     double min;
@@ -113,21 +128,23 @@ private:
     int ratio;
     Mat detect, out;
 
+    Mat binary_copy;
+
     //Private methods
     void createThreshControl();
     void setColor();
-    void largestContours(vector<vector<Point>> inputArray);
+    void largestContour(vector<vector<Point>> inputArray);
     void drawHUD();
-    void draw(int index, vector<vector<Point>> cont);
+    void draw(int index, vector<vector<Point>> cont, vector<Point> approx);
+    void createThresh(vector<vector<Point>> contour, bool singleChannel, int method);
     void initializeColors();
     void initializeDefaultParameters();
     void determineShape(vector<vector<Point>> contour, int index);
     void roundestContour(vector<vector<Point>> inputArray);
     vector<vector<Point>> filterNoise(vector<vector<Point>> contour);
     void regionOfInterest(int index);
-    int getFocalLength(int pixWidth);
-    int getDistance(double pixWidth);
-    void sportMode(Sport event);
+    void setDistance(vector<Point> object, int focalLength);
+
 
 };
 

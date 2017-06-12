@@ -14,6 +14,7 @@ Vision v(&source, "RED", &final);
 int main(){
 
     v.detectCircle(true);
+    v.detectRect(true);
 
     VideoCapture cap(1);
 
@@ -32,6 +33,7 @@ int main(){
         }
 
         v.start();
+        v.setSingleThreshold();
 
         namedWindow("Final", CV_WINDOW_AUTOSIZE);
         imshow("Final", final);
